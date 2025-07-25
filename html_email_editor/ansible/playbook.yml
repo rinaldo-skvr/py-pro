@@ -1,0 +1,46 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install Python3 and pip
+      apt:
+        name:
+          - python3
+          - python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Install required Python packages
+      pip:
+        requirements: /home/orangepi/html_email_editor/requirements.txt
+        executable: pip3
+
+    - name: Copy app files
+      copy:
+        src: "{{ playbook_dir }}/../html_email_editor/"
+        dest: /home/orangepi/html_email_editor/
+        owner: orangepi
+        group: orangepi
+        mode: 0755
+
+    - name: Run Flask app on boot (systemd)
+      copy:
+        dest: /etc/systemd/system/html_email_editor.service
+        content: |
+          [Unit]
+          Description=HTML Email Editor Flask App
+          After=network.target
+
+          [Service]
+          User=orangepi
+          WorkingDirectory=/home/orangepi/html_email_editor
+          ExecStart=/usr/bin/python3 app.py
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start service
+      systemd:
+        name: html_email_editor
+        enabled: yes
+        state: started
