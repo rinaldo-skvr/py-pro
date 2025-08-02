@@ -121,7 +121,7 @@ jobs:
       run: |
         export ANSIBLE_HOST_KEY_CHECKING=False
         ansible-playbook -i ansible/inventory.yml \
-          ansible/deploy-blindassist.yml \
+          ansible/deploy-3netra-poc.yml \
           --extra-vars "github_sha=${{ github.sha }}" \
           --extra-vars "build_date=$(date +%Y%m%d)" \
           -v
