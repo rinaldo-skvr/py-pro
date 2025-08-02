@@ -38,7 +38,9 @@ jobs:
         
         # Download base image zip from release
         echo "Downloading base image package..."
-        wget -q https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
+        curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          -o base-image.zip \
+          https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
         
         # Extract the zip file
         echo "Extracting base image files..."
