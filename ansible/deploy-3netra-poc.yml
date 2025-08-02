@@ -14,10 +14,6 @@
     build_date: "{{ build_date | default('unknown') }}"
 
   tasks:
-    - name: Wait for system to be ready
-      wait_for_connection:
-        timeout: 30
-      
     - name: Gather facts
       setup:
 
