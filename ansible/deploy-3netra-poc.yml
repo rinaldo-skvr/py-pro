@@ -27,7 +27,9 @@
         cache_valid_time: 3600
 
     - name: Install system dependencies
-      apt:
+      shell:
+        cmd: |
+          sudo pkg- build_env.txt
         name:
           # Python and development tools
           - python3
@@ -189,13 +191,6 @@
         enabled: yes
         state: started
         daemon_reload: yes
-          logging:
-            level: "INFO"
-            file: "/var/log/blindassist/app.log"
-        dest: "{{ app_dir }}/config/config.yml"
-        owner: "{{ app_user }}"
-        group: "{{ app_user }}"
-        mode: '0644'
 
     # - name: Configure audio permissions
     #   copy:
