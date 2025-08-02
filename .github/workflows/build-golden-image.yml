@@ -31,23 +31,27 @@ jobs:
           dosfstools \
           e2fsprogs
 
-    - name: Verify base image
+    - name: Download and extract base image
       run: |
-        if [ ! -f "${{ env.BASE_IMAGE_PATH }}" ]; then
-          echo "Error: Base image not found at ${{ env.BASE_IMAGE_PATH }}"
-          exit 1
-        fi
+        mkdir -p base-image
+        cd base-image
         
-        echo "Base image found: ${{ env.BASE_IMAGE_PATH }}"
-        ls -lh "${{ env.BASE_IMAGE_PATH }}"
+        # Download base image zip from release
+        echo "Downloading base image package..."
+        wget -q https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
         
-        # Verify checksum if sha file exists
-        if [ -f "${{ env.BASE_IMAGE_PATH }}.sha" ]; then
-          echo "Verifying checksum..."
-          cd base-image
-          sha256sum -c "$(basename ${{ env.BASE_IMAGE_PATH }}).sha"
-          cd ..
-        fi
+        # Extract the zip file
+        echo "Extracting base image files..."
+        unzip base-image.zip
+        
+        # Verify checksum
+        echo "Verifying checksum..."
+        sha256sum -c Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31.img.sha256
+        
+        # Clean up zip file
+        rm base-image.zip
+        
+        cd ..
 
     - name: Prepare working image
       run: |
