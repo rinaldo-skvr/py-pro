@@ -37,52 +37,27 @@ jobs:
         mkdir -p base-image
         cd base-image
         
-        # Download base image from Google Drive
+        # Download base image from GitHub release
         echo "Downloading base image package..."
-        FILE_ID="13w2L3aJo5kBrJ0obTnYlQsqFWzfEV-F7"
-        
-        # Function to extract download link
-        extract_drive_url() {
-          curl -s -L -c cookies.txt "https://drive.google.com/uc?id=${FILE_ID}&export=download" | \
-          grep -o 'action=".*" ' | \
-          sed 's/action="\([^"]*\)".*/\1/' | \
-          sed 's/\&amp;/\&/g'
-        }
-        
-        # Get the actual download URL
-        echo "Getting download URL..."
-        DRIVE_URL=$(extract_drive_url)
-        
-        # Download the file
-        echo "Starting download..."
-        if [ -n "$DRIVE_URL" ]; then
-          curl -L -b cookies.txt -o "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z" "$DRIVE_URL"
-        else
-          # Fallback to direct download for smaller files
-          curl -L -o "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z" \
-            "https://drive.google.com/uc?export=download&id=${FILE_ID}"
-        fi
-        
-        # Clean up cookies
-        rm cookies.txt
+        wget -q https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
         
         # Check if download was successful
-        if [ ! -s "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z" ]; then
+        if [ ! -s "base-image.zip" ]; then
           echo "Failed to download base image"
-          cat "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z"  # Show error message if any
+          cat "base-image.zip"  # Show error message if any
           exit 1
         fi
         
-        # Extract the 7z file
+        # Extract the zip file
         echo "Extracting base image files..."
-        7z x "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z"
+        unzip base-image.zip
         
         # Verify checksum
         echo "Verifying checksum..."
         sha256sum -c Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31.img.sha256
         
         # Clean up archive file
-        rm "Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31-4gb.7z"
+        rm base-image.zip
         
         cd ..
 
