@@ -72,7 +72,8 @@ jobs:
         
         # Fix partition table and resize
         echo "Resizing partition..."
-        parted working-image.img resizepart 2 100%
+        sudo parted working-image.img print
+        sudo parted -s working-image.img unit % resizepart 2 100%
 
     - name: Mount image and setup chroot
       run: |
