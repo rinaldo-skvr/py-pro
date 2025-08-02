@@ -154,20 +154,20 @@ jobs:
           **Build Info:**
           - Commit: ${{ github.sha }}
           - Date: $(date +%Y-%m-%d)
-          - Image: ${{ env.FINAL_IMAGE_FILE }}
-          - Size: $(ls -lh ${{ env.FINAL_IMAGE_FILE }} | awk '{print $5}')
+          - Image: ${FINAL_IMAGE_FILE}
+          - Size: $(ls -lh "${FINAL_IMAGE_FILE}" | awk '{print $5}')
           
           **Flash Instructions:**
           ```bash
           # Download the image
-          wget ${{ env.FINAL_IMAGE_FILE }}
+          wget "${FINAL_IMAGE_FILE}"
           
           # Verify checksum
-          sha256sum -c ${{ env.CHECKSUM_FILE }}
+          sha256sum -c "${CHECKSUM_FILE}"
           
           # Extract and flash
-          xz -d ${{ env.FINAL_IMAGE_FILE }}
-          sudo dd if=${{ env.FINAL_IMAGE_FILE %.xz }} of=/dev/sdX bs=4M status=progress
+          xz -d "${FINAL_IMAGE_FILE}"
+          sudo dd if="${FINAL_IMAGE_FILE%.xz}" of=/dev/sdX bs=4M status=progress
           ```
         draft: false
         prerelease: false
