@@ -38,9 +38,15 @@ jobs:
         
         # Download base image zip from release
         echo "Downloading base image package..."
-        curl -L -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+        HTTP_RESPONSE=$(curl -L -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -o base-image.zip \
-          https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
+          https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip)
+        
+        if [ "$HTTP_RESPONSE" != "200" ]; then
+          echo "Failed to download base image (HTTP $HTTP_RESPONSE)"
+          cat base-image.zip  # Show error message if any
+          exit 1
+        fi
         
         # Extract the zip file
         echo "Extracting base image files..."
