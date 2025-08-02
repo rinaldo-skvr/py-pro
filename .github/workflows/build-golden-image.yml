@@ -1,4 +1,4 @@
-name: Simple Golden Image POC
+name: Build 3Netra POC Golden Image
 
 on:
   push:
@@ -6,15 +6,18 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: "blindassist-poc"
+  IMAGE_NAME: "blindassist-orangepi"
+  BASE_IMAGE_PATH: "base-image/Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31.img"
 
 jobs:
-  build-poc-image:
+  build-golden-image:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        lfs: true  # Enable Git LFS for large base image
 
     - name: Install dependencies
       run: |
@@ -24,185 +27,87 @@ jobs:
           parted \
           kpartx \
           xz-utils \
-          wget \
-          ansible
+          ansible \
+          dosfstools \
+          e2fsprogs
 
-    - name: Download Orange Pi Ubuntu image
+    - name: Verify base image
       run: |
-        # Using a smaller test image for POC (you can replace with actual Orange Pi image)
-        echo "Downloading Ubuntu ARM image..."
-        wget -O ubuntu-arm.img.xz "http://cdimage.ubuntu.com/ubuntu-server/jammy/daily-preinstalled/current/jammy-preinstalled-server-arm64+raspi.img.xz"
-        xz -d ubuntu-arm.img.xz
+        if [ ! -f "${{ env.BASE_IMAGE_PATH }}" ]; then
+          echo "Error: Base image not found at ${{ env.BASE_IMAGE_PATH }}"
+          exit 1
+        fi
         
-        # Make a working copy
-        cp ubuntu-arm.img working-image.img
+        echo "Base image found: ${{ env.BASE_IMAGE_PATH }}"
+        ls -lh "${{ env.BASE_IMAGE_PATH }}"
         
-        # Expand image size (add 1GB for our application)
-        dd if=/dev/zero bs=1M count=1024 >> working-image.img
+        # Verify checksum if sha file exists
+        if [ -f "${{ env.BASE_IMAGE_PATH }}.sha" ]; then
+          echo "Verifying checksum..."
+          cd base-image
+          sha256sum -c "$(basename ${{ env.BASE_IMAGE_PATH }}).sha"
+          cd ..
+        fi
 
-    - name: Mount image and setup
+    - name: Prepare working image
+      run: |
+        # Create working copy of base image
+        cp "${{ env.BASE_IMAGE_PATH }}" working-image.img
+        
+        # Expand image size for additional software (add 2GB)
+        echo "Expanding image size..."
+        dd if=/dev/zero bs=1M count=2048 >> working-image.img
+        
+        # Fix partition table and resize
+        echo "Resizing partition..."
+        parted working-image.img resizepart 2 100%
+
+    - name: Mount image and setup chroot
       run: |
         # Setup loop device
         sudo losetup -P /dev/loop0 working-image.img
         
         # Wait for partitions to appear
-        sleep 2
+        sleep 3
         
-        # Resize the root partition and filesystem
-        sudo parted /dev/loop0 resizepart 2 100% || true
+        # Resize filesystem
         sudo e2fsck -f /dev/loop0p2 || true
         sudo resize2fs /dev/loop0p2
         
-        # Create mount point and mount
-        sudo mkdir -p /mnt/ubuntu-image
-        sudo mount /dev/loop0p2 /mnt/ubuntu-image
-        sudo mount /dev/loop0p1 /mnt/ubuntu-image/boot/firmware || sudo mount /dev/loop0p1 /mnt/ubuntu-image/boot
+        # Create mount point
+        sudo mkdir -p /mnt/orangepi
         
-        # Setup qemu for ARM emulation
-        sudo cp /usr/bin/qemu-aarch64-static /mnt/ubuntu-image/usr/bin/ || sudo cp /usr/bin/qemu-arm-static /mnt/ubuntu-image/usr/bin/
+        # Mount partitions
+        sudo mount /dev/loop0p2 /mnt/orangepi
+        sudo mount /dev/loop0p1 /mnt/orangepi/boot
         
-        # Mount necessary filesystems for chroot
-        sudo mount --bind /dev /mnt/ubuntu-image/dev
-        sudo mount --bind /proc /mnt/ubuntu-image/proc
-        sudo mount --bind /sys /mnt/ubuntu-image/sys
-
-    - name: Create simple Ansible inventory
-      run: |
-        mkdir -p ansible
-        cat > ansible/inventory.yml << 'EOF'
-        all:
-          hosts:
-            target_image:
-              ansible_connection: chroot
-              ansible_chroot: /mnt/ubuntu-image
-              ansible_python_interpreter: /usr/bin/python3
-        EOF
-
-    - name: Create simple Ansible playbook
-      run: |
-        cat > ansible/deploy.yml << 'EOF'
-        ---
-        - name: Deploy BlindAssist Application
-          hosts: target_image
-          become: yes
-          gather_facts: no
-          
-          tasks:
-            - name: Update package cache
-              apt:
-                update_cache: yes
-              
-            - name: Install basic dependencies
-              apt:
-                name:
-                  - python3
-                  - python3-pip
-                  - python3-venv
-                  - git
-                  - curl
-                  - nano
-                  - htop
-                state: present
-            
-            - name: Create application user
-              user:
-                name: blindassist
-                system: yes
-                home: /opt/blindassist
-                shell: /bin/bash
-            
-            - name: Create application directory
-              file:
-                path: /opt/blindassist
-                state: directory
-                owner: blindassist
-                group: blindassist
-                mode: '0755'
-            
-            - name: Copy application code
-              copy:
-                src: "{{ playbook_dir }}/../src/"
-                dest: /opt/blindassist/app/
-                owner: blindassist
-                group: blindassist
-                mode: '0755'
-              when: false  # Skip if no src directory exists
-            
-            - name: Create sample application
-              copy:
-                content: |
-                  #!/usr/bin/env python3
-                  print("BlindAssist POC Application")
-                  print("This is a placeholder for your vision processing app")
-                dest: /opt/blindassist/app.py
-                owner: blindassist
-                group: blindassist
-                mode: '0755'
-            
-            - name: Create Python virtual environment
-              become_user: blindassist
-              command: python3 -m venv /opt/blindassist/venv
-              args:
-                creates: /opt/blindassist/venv/bin/activate
-            
-            - name: Install Python packages
-              become_user: blindassist
-              pip:
-                name:
-                  - opencv-python-headless
-                  - numpy
-                  - requests
-                virtualenv: /opt/blindassist/venv
-            
-            - name: Create systemd service
-              copy:
-                content: |
-                  [Unit]
-                  Description=BlindAssist POC Application
-                  After=network.target
-                  
-                  [Service]
-                  Type=simple
-                  User=blindassist
-                  WorkingDirectory=/opt/blindassist
-                  ExecStart=/opt/blindassist/venv/bin/python /opt/blindassist/app.py
-                  Restart=always
-                  
-                  [Install]
-                  WantedBy=multi-user.target
-                dest: /etc/systemd/system/blindassist.service
-                mode: '0644'
-            
-            - name: Enable the service
-              systemd:
-                name: blindassist
-                enabled: yes
-                daemon_reload: yes
-            
-            - name: Create version file
-              copy:
-                content: |
-                  POC_VERSION=1.0
-                  BUILD_DATE={{ ansible_date_time.iso8601 }}
-                  GITHUB_SHA={{ ansible_env.GITHUB_SHA | default('unknown') }}
-                dest: /opt/blindassist/version.txt
-                owner: blindassist
-                group: blindassist
-        EOF
+        # Setup qemu for ARM64 emulation
+        sudo cp /usr/bin/qemu-aarch64-static /mnt/orangepi/usr/bin/
+        
+        # Mount system directories for chroot
+        sudo mount --bind /dev /mnt/orangepi/dev
+        sudo mount --bind /proc /mnt/orangepi/proc
+        sudo mount --bind /sys /mnt/orangepi/sys
+        sudo mount -t devpts devpts /mnt/orangepi/dev/pts
 
     - name: Run Ansible playbook
       run: |
-        cd ansible
-        ansible-playbook -i inventory.yml deploy.yml -v
+        export ANSIBLE_HOST_KEY_CHECKING=False
+        ansible-playbook -i ansible/inventory.yml \
+          ansible/deploy-blindassist.yml \
+          --extra-vars "github_sha=${{ github.sha }}" \
+          --extra-vars "build_date=$(date +%Y%m%d)" \
+          -v
 
-    - name: Cleanup and finalize image
+    - name: Cleanup and create final image
       run: |
-        # Clean up the chroot environment
-        sudo umount /mnt/ubuntu-image/sys || true
-        sudo umount /mnt/ubuntu-image/proc || true
-        sudo umount /mnt/ubuntu-image/dev || true
-        sudo umount /mnt/ubuntu-image/boot/firmware || sudo umount /mnt/ubuntu-image/boot || true
-        sudo umount /mnt/ubuntu-image || true
+        # Cleanup chroot environment
+        sudo umount /mnt/orangepi/dev/pts || true
+        sudo umount /mnt/orangepi/dev || true
+        sudo umount /mnt/orangepi/proc || true
+        sudo umount /mnt/orangepi/sys || true
+        sudo umount /mnt/orangepi/boot || true
+        sudo umount /mnt/orangepi || true
         
         # Detach loop device
         sudo losetup -d /dev/loop0
@@ -211,33 +116,66 @@ jobs:
         FINAL_IMAGE="${{ env.IMAGE_NAME }}-$(date +%Y%m%d)-${GITHUB_SHA:0:7}.img"
         mv working-image.img "$FINAL_IMAGE"
         
-        # Compress the image
+        # Compress image
         echo "Compressing final image..."
-        xz -9 "$FINAL_IMAGE"
+        xz -9 -T 0 "$FINAL_IMAGE"
         
-        # Generate checksum
+        # Generate checksums
         sha256sum "${FINAL_IMAGE}.xz" > "${FINAL_IMAGE}.xz.sha256"
         
+        # Store filenames in environment
         echo "FINAL_IMAGE_FILE=${FINAL_IMAGE}.xz" >> $GITHUB_ENV
         echo "CHECKSUM_FILE=${FINAL_IMAGE}.xz.sha256" >> $GITHUB_ENV
 
-    - name: Upload artifacts
+    - name: Upload golden image artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: golden-image-poc
+        name: blindassist-golden-image
         path: |
           ${{ env.FINAL_IMAGE_FILE }}
           ${{ env.CHECKSUM_FILE }}
         retention-days: 30
 
-    - name: Display results
+    - name: Create release on main branch
+      if: github.ref == 'refs/heads/main'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: build-${{ github.run_number }}
+        release_name: Golden Image Build ${{ github.run_number }}
+        body: |
+          **BlindAssist Golden Image**
+          
+          **Build Info:**
+          - Commit: ${{ github.sha }}
+          - Date: $(date +%Y-%m-%d)
+          - Image: ${{ env.FINAL_IMAGE_FILE }}
+          - Size: $(ls -lh ${{ env.FINAL_IMAGE_FILE }} | awk '{print $5}')
+          
+          **Flash Instructions:**
+          ```bash
+          # Download the image
+          wget ${{ env.FINAL_IMAGE_FILE }}
+          
+          # Verify checksum
+          sha256sum -c ${{ env.CHECKSUM_FILE }}
+          
+          # Extract and flash
+          xz -d ${{ env.FINAL_IMAGE_FILE }}
+          sudo dd if=${{ env.FINAL_IMAGE_FILE %.xz }} of=/dev/sdX bs=4M status=progress
+          ```
+        draft: false
+        prerelease: false
+
+    - name: Display build summary
       run: |
-        echo "=== POC Build Complete ==="
-        echo "Final image: ${{ env.FINAL_IMAGE_FILE }}"
-        echo "Size: $(ls -lh ${{ env.FINAL_IMAGE_FILE }} | awk '{print $5}')"
-        echo "Checksum: $(cat ${{ env.CHECKSUM_FILE }})"
-        echo ""
-        echo "To download and test:"
-        echo "1. Download from GitHub Actions artifacts"
-        echo "2. Extract: xz -d ${{ env.FINAL_IMAGE_FILE }}"
-        echo "3. Flash: sudo dd if=${FINAL_IMAGE_FILE%.xz} of=/dev/sdX bs=4M status=progress"
+        echo "=========================================="
+        echo "🎉 Golden Image Build Complete!"
+        echo "=========================================="
+        echo "📁 Final image: ${{ env.FINAL_IMAGE_FILE }}"
+        echo "📏 Size: $(ls -lh ${{ env.FINAL_IMAGE_FILE }} | awk '{print $5}')"
+        echo "🔐 Checksum: $(cat ${{ env.CHECKSUM_FILE }} | cut -d' ' -f1)"
+        echo "📅 Build date: $(date)"
+        echo "🔗 Commit: ${{ github.sha }}"
+        echo "=========================================="

@@ -1,0 +1,307 @@
+# ansible/deploy-blindassist.yml
+---
+- name: Deploy 3Netra POC Application to Orange Pi Zero 2W
+  hosts: orangepi_target
+  become: yes
+  gather_facts: no
+  
+  vars:
+    app_user: blindassist
+    app_dir: /opt/blindassist
+    service_name: blindassist
+    python_version: "3.10"
+    github_sha: "{{ github_sha | default('unknown') }}"
+    build_date: "{{ build_date | default('unknown') }}"
+
+  tasks:
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 30
+      
+    - name: Gather facts
+      setup:
+
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system dependencies
+      apt:
+        name:
+          # Python and development tools
+          - python3
+          - python3-pip
+          - python3-venv
+          - python3-dev
+          - build-essential
+          - cmake
+          - pkg-config
+          
+          # Computer vision libraries
+          - libopencv-dev
+          - python3-opencv
+          - libjpeg-dev
+          - libpng-dev
+          - libtiff-dev
+          - libavcodec-dev
+          - libavformat-dev
+          - libswscale-dev
+          - libv4l-dev
+          
+          # Audio libraries
+          - libasound2-dev
+          - portaudio19-dev
+          - espeak
+          - espeak-data
+          - pulseaudio
+          - alsa-utils
+          
+          # Bluetooth
+          - bluetooth
+          - bluez
+          - bluez-tools
+          - pulseaudio-module-bluetooth
+          
+          # System utilities
+          - git
+          - curl
+          - wget
+          - nano
+          - htop
+          - v4l-utils
+          - i2c-tools
+          - usbutils
+          - systemd
+          - openssh-server
+        state: present
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        home: "{{ app_dir }}"
+        shell: /bin/bash
+        groups: audio,video,dialout,gpio,i2c,spi,bluetooth,pulse-access
+        append: yes
+
+    - name: Create application directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/app"
+        - "{{ app_dir }}/config"
+        - "{{ app_dir }}/logs"
+        - /var/log/blindassist
+
+    - name: Copy application source code
+      copy:
+        src: "{{ playbook_dir }}/../src/"
+        dest: "{{ app_dir }}/app/"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+      when: ansible_check_mode == false
+
+    - name: Create Python virtual environment
+      become_user: "{{ app_user }}"
+      command: python3 -m venv "{{ app_dir }}/venv"
+      args:
+        creates: "{{ app_dir }}/venv/bin/activate"
+
+    - name: Upgrade pip in virtual environment
+      become_user: "{{ app_user }}"
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ app_dir }}/venv"
+
+    - name: Install Python dependencies
+      become_user: "{{ app_user }}"
+      pip:
+        requirements: "{{ app_dir }}/app/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+        extra_args: --no-cache-dir
+
+    - name: Create application configuration
+      copy:
+        dest: "{{ app_dir }}/config/config.yml"
+        content: |
+          # BlindAssist Configuration
+          app:
+            name: "BlindAssist"
+            version: "1.0.0"
+            debug: false
+          
+          camera:
+            device_id: 0
+            width: 640
+            height: 480
+            fps: 30
+          
+          audio:
+            output_device: "default"
+            volume: 0.8
+            voice_language: "en"
+        mode: '0644'
+
+    - name: Create startup script
+      copy:
+        dest: "{{ app_dir }}/app/start.sh"
+        content: |
+          #!/bin/bash
+          cd "{{ app_dir }}/app"
+          source "{{ app_dir }}/venv/bin/activate"
+          exec uvicorn main:app --host 0.0.0.0 --port 8000
+        mode: '0755'
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/{{ service_name }}.service
+        content: |
+          [Unit]
+          Description=3Netra BlindAssist Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          User={{ app_user }}
+          Group={{ app_user }}
+          WorkingDirectory={{ app_dir }}/app
+          ExecStart={{ app_dir }}/app/start.sh
+          Restart=always
+          RestartSec=3
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Enable and start service
+      systemd:
+        name: "{{ service_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+          logging:
+            level: "INFO"
+            file: "/var/log/blindassist/app.log"
+        dest: "{{ app_dir }}/config/config.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    # - name: Configure audio permissions
+    #   copy:
+    #     content: |
+    #       # Audio configuration for BlindAssist user
+    #       {{ app_user }} ALL=(ALL) NOPASSWD: /usr/bin/amixer, /usr/bin/aplay, /usr/bin/espeak
+    #     dest: "/etc/sudoers.d/{{ app_user }}-audio"
+    #     mode: '0440'
+    #     validate: 'visudo -cf %s'
+
+    # - name: Configure camera permissions
+    #   copy:
+    #     content: |
+    #       # Camera permissions for BlindAssist
+    #       SUBSYSTEM=="video4linux", GROUP="video", MODE="0664"
+    #       KERNEL=="video[0-9]*", GROUP="video", MODE="0664"
+    #     dest: /etc/udev/rules.d/99-blindassist-camera.rules
+    #     mode: '0644'
+
+    # - name: Enable required kernel modules
+    #   lineinfile:
+    #     path: /etc/modules
+    #     line: "{{ item }}"
+    #     create: yes
+    #   loop:
+    #     - snd-aloop
+    #     - v4l2loopback
+
+    # - name: Configure boot parameters for Orange Pi Zero 2W
+    #   lineinfile:
+    #     path: /boot/armbianEnv.txt
+    #     regexp: '^{{ item.key }}='
+    #     line: '{{ item.key }}={{ item.value }}'
+    #     create: yes
+    #   loop:
+    #     - { key: 'overlays', value: 'i2c1 i2c3 spi-spidev uart1 usbhost2 usbhost3' }
+    #     - { key: 'param_i2c1_bus', value: 'on' }
+    #     - { key: 'param_i2c3_bus', value: 'on' }
+    #     - { key: 'param_spi_bus', value: 'on' }
+
+    # - name: Create version and build info
+    #   copy:
+    #     content: |
+    #       BLINDASSIST_VERSION=1.0.0
+    #       BUILD_DATE={{ build_date }}
+    #       GITHUB_SHA={{ github_sha }}
+    #       BUILT_BY=GitHub Actions
+    #       TARGET_DEVICE=Orange Pi Zero 2W
+    #       BASE_IMAGE=Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31
+    #       ANSIBLE_PLAYBOOK_VERSION=1.0
+    #     dest: "{{ app_dir }}/build-info.txt"
+    #     owner: "{{ app_user }}"
+    #     group: "{{ app_user }}"
+    #     mode: '0644'
+
+    # - name: Configure log rotation
+    #   copy:
+    #     content: |
+    #       /var/log/blindassist/*.log {
+    #           daily
+    #           rotate 7
+    #           compress
+    #           delaycompress
+    #           missingok
+    #           notifempty
+    #           create 644 {{ app_user }} {{ app_user }}
+    #           postrotate
+    #               systemctl reload {{ service_name }} > /dev/null 2>&1 || true
+    #           endscript
+    #       }
+    #     dest: /etc/logrotate.d/blindassist
+    #     mode: '0644'
+
+    # - name: Enable and configure SSH
+    #   lineinfile:
+    #     path: /etc/ssh/sshd_config
+    #     regexp: '^#?{{ item.key }}'
+    #     line: '{{ item.key }} {{ item.value }}'
+    #     backup: yes
+    #   loop:
+    #     - { key: 'PermitRootLogin', value: 'no' }
+    #     - { key: 'PasswordAuthentication', value: 'yes' }
+    #     - { key: 'PubkeyAuthentication', value: 'yes' }
+
+    - name: Enable services
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        daemon_reload: yes
+      loop:
+        - ssh
+        - bluetooth
+        - "{{ service_name }}"
+
+    - name: Clean up package cache
+      apt:
+        autoclean: yes
+        autoremove: yes
+
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "✅ BlindAssist deployment completed successfully!"
+          - "📁 Application directory: {{ app_dir }}"
+          - "👤 Service user: {{ app_user }}"
+          - "🚀 Service name: {{ service_name }}"
+          - "📝 Logs: /var/log/blindassist/"
+          - "🔧 Config: {{ app_dir }}/config/config.yml"
+          - "📊 Build info: {{ app_dir }}/build-info.txt"
