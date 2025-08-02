@@ -1,9 +1,9 @@
-# ansible/inventory.yml
+---
 all:
   hosts:
     orangepi_target:
       ansible_connection: chroot
+      ansible_host: localhost
       ansible_chroot: /mnt/orangepi
       ansible_python_interpreter: /usr/bin/python3
-      # ARM64 specific settings
       ansible_architecture: aarch64
