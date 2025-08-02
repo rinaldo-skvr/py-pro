@@ -73,7 +73,12 @@ jobs:
         # Fix partition table and resize
         echo "Resizing partition..."
         sudo parted working-image.img print
-        sudo parted -s working-image.img unit % resizepart 2 100%
+        
+        # Get the number of the last partition
+        LAST_PART=$(sudo parted working-image.img print | tail -n 2 | head -n 1 | awk '{print $1}')
+        
+        # Resize the last partition to use all available space
+        sudo parted -s working-image.img unit % resizepart ${LAST_PART} 100%
 
     - name: Mount image and setup chroot
       run: |
