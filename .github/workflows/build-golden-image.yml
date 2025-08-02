@@ -129,9 +129,14 @@ jobs:
         # Set Ansible environment variables
         export ANSIBLE_HOST_KEY_CHECKING=False
         export ANSIBLE_PYTHON_INTERPRETER=/usr/bin/python3
+        export ANSIBLE_REMOTE_TMP=/tmp/ansible
         
-        # Run the playbook
-        ansible-playbook -i ansible/inventory.yml \
+        # Create temp directory for Ansible in chroot
+        sudo mkdir -p /mnt/orangepi/tmp/ansible
+        sudo chmod 777 /mnt/orangepi/tmp/ansible
+        
+        # Run the playbook with sudo
+        sudo -E ansible-playbook -i ansible/inventory.yml \
           ansible/deploy-3netra-poc.yml \
           --extra-vars "github_sha=${{ github.sha }}" \
           --extra-vars "build_date=$(date +%Y%m%d)" \
