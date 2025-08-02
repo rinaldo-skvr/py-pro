@@ -82,6 +82,9 @@ jobs:
 
     - name: Mount image and setup chroot
       run: |
+        # Get the last partition number again
+        LAST_PART=$(sudo parted working-image.img print | tail -n 2 | head -n 1 | awk '{print $1}')
+        
         # Setup loop device
         sudo losetup -P /dev/loop0 working-image.img
         
@@ -89,15 +92,21 @@ jobs:
         sleep 3
         
         # Resize filesystem
-        sudo e2fsck -f /dev/loop0p2 || true
-        sudo resize2fs /dev/loop0p2
+        sudo e2fsck -f /dev/loop0p${LAST_PART} -y || true
+        sudo resize2fs /dev/loop0p${LAST_PART}
         
         # Create mount point
         sudo mkdir -p /mnt/orangepi
         
-        # Mount partitions
-        sudo mount /dev/loop0p2 /mnt/orangepi
-        sudo mount /dev/loop0p1 /mnt/orangepi/boot
+        # Mount root partition (using detected partition number)
+        sudo mount /dev/loop0p${LAST_PART} /mnt/orangepi
+        
+        # Check if boot partition exists and mount it
+        if [ -e /dev/loop0p1 ]; then
+            sudo mount /dev/loop0p1 /mnt/orangepi/boot
+        else
+            echo "No separate boot partition found, continuing without mounting boot"
+        fi
         
         # Setup qemu for ARM64 emulation
         sudo cp /usr/bin/qemu-aarch64-static /mnt/orangepi/usr/bin/
