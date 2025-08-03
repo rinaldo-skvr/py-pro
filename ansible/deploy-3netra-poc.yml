@@ -72,6 +72,20 @@
           - openssh-server
         state: present
 
+    - name: Create required system groups
+      group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - gpio
+        - i2c
+        - spi
+        - bluetooth
+        - pulse-access
+        - audio
+        - video
+        - dialout
+
     - name: Create application user
       user:
         name: "{{ app_user }}"
