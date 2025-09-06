@@ -192,20 +192,10 @@
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/setuptools
 
-    - name: Install Python dependencies in googlenv virtual environment (with retry)
-      command: /home/orangepi/googlenv/bin/pip install -r "{{ app_dir }}/app/requirements.txt" --no-cache-dir --timeout 300
+    - name: Install essential packages only
+      command: /home/orangepi/googlenv/bin/pip install fastapi uvicorn pydantic requests numpy opencv-python pyttsx3 gtts playsound
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
-      retries: 3
-      delay: 10
-      until: true
-
-    # - name: Install Python dependencies
-    #   become_user: "{{ app_user }}"
-    #   pip:
-    #     requirements: "{{ app_dir }}/app/requirements.txt"
-    #     virtualenv: "{{ app_dir }}/venv"
-    #     extra_args: --no-cache-dir
 
     - name: Create application configuration
       copy:
