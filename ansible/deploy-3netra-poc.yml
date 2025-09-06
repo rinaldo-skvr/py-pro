@@ -193,9 +193,22 @@
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/setuptools
 
     - name: Install essential packages only
-      command: /home/orangepi/googlenv/bin/pip install fastapi uvicorn pydantic requests numpy opencv-python pyttsx3 gtts playsound
+      command: /home/orangepi/googlenv/bin/pip install fastapi uvicorn pydantic requests numpy opencv-python pyttsx3 gtts
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
+
+    - name: Install playsound with fallback
+      command: /home/orangepi/googlenv/bin/pip install playsound
+      args:
+        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/playsound
+      ignore_errors: yes
+      register: playsound_result
+
+    - name: Install alternative audio package if playsound fails
+      command: /home/orangepi/googlenv/bin/pip install pygame
+      args:
+        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/pygame
+      when: playsound_result.failed
 
     - name: Create application configuration
       copy:
