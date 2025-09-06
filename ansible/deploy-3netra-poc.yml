@@ -110,11 +110,6 @@
         state: latest
         virtualenv: /home/orangepi/googlenv
 
-    - name: Install Python dependencies in googlenv virtual environment
-      pip:
-        requirements: "{{ playbook_dir }}/../src/requirements.txt"
-        virtualenv: /home/orangepi/googlenv
-        extra_args: --no-cache-dir
 
     - name: Create required system groups
       group:
@@ -175,12 +170,19 @@
         state: latest
         virtualenv: "{{ app_dir }}/venv"
 
-    - name: Install Python dependencies
+    - name: Install Python dependencies in googlenv virtual environment
       become_user: "{{ app_user }}"
       pip:
         requirements: "{{ app_dir }}/app/requirements.txt"
-        virtualenv: "{{ app_dir }}/venv"
+        virtualenv: /home/orangepi/googlenv
         extra_args: --no-cache-dir
+
+    # - name: Install Python dependencies
+    #   become_user: "{{ app_user }}"
+    #   pip:
+    #     requirements: "{{ app_dir }}/app/requirements.txt"
+    #     virtualenv: "{{ app_dir }}/venv"
+    #     extra_args: --no-cache-dir
 
     - name: Create application configuration
       copy:
