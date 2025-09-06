@@ -30,14 +30,9 @@
           - python3-pip
           - python3-venv
           - python3-dev
-          - python3-setuptools
           - build-essential
           - cmake
           - pkg-config
-          
-          # GDAL libraries
-          - gdal-bin
-          - libgdal-dev
           
           # Computer vision libraries
           - libopencv-dev
@@ -52,39 +47,17 @@
           
           # Audio libraries
           - libasound2-dev
-          - libjack-dev
-          - libsndfile1-dev
           - portaudio19-dev
           - espeak
           - espeak-data
           - pulseaudio
           - alsa-utils
           
-          # GUI and graphics libraries
-          - libcairo2-dev
-          - libgdk-pixbuf2.0-dev
-          - libglib2.0-dev
-          - libcups2-dev
-          - libxml2-dev
-          - libpoppler-glib-dev
-          
-          # System libraries
-          - libdbus-1-dev
-          - libgirepository1.0-dev
-          
           # Bluetooth
           - bluetooth
           - bluez
           - bluez-tools
           - pulseaudio-module-bluetooth
-          
-          # Hardware interfaces
-          - wiringpi
-          
-          # Network and media
-          - network-manager
-          - gstreamer1.0-tools
-          - gstreamer1.0-plugins-base
           
           # System utilities
           - git
@@ -98,23 +71,6 @@
           - systemd
           - openssh-server
         state: present
-
-    - name: Create googlenv Python virtual environment
-      command: python3 -m venv /home/orangepi/googlenv
-      args:
-        creates: /home/orangepi/googlenv/bin/activate
-
-    - name: Upgrade pip in googlenv virtual environment
-      pip:
-        name: pip
-        state: latest
-        virtualenv: /home/orangepi/googlenv
-
-    - name: Install Python dependencies in googlenv virtual environment
-      pip:
-        requirements: "{{ playbook_dir }}/../src/requirements.txt"
-        virtualenv: /home/orangepi/googlenv
-        extra_args: --no-cache-dir
 
     - name: Create required system groups
       group:
@@ -209,7 +165,7 @@
         dest: "{{ app_dir }}/app/start.sh"
         content: |
           #!/bin/bash
-          cd "{{   }}/app"
+          cd "{{ app_dir }}/app"
           source "{{ app_dir }}/venv/bin/activate"
           exec uvicorn main:app --host 0.0.0.0 --port 8000
         mode: '0755'
