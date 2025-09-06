@@ -197,18 +197,25 @@
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
 
-    - name: Install playsound with fallback
-      command: /home/orangepi/googlenv/bin/pip install playsound
-      args:
-        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/playsound
-      ignore_errors: yes
-      register: playsound_result
+    - name: Install Python dependencies
+      become_user: "{{ app_user }}"
+      pip:
+        requirements: "{{ app_dir }}/app/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+        extra_args: --no-cache-dir
 
-    - name: Install alternative audio package if playsound fails
-      command: /home/orangepi/googlenv/bin/pip install pygame
-      args:
-        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/pygame
-      when: playsound_result.failed
+    # - name: Install playsound with fallback
+    #   command: /home/orangepi/googlenv/bin/pip install playsound
+    #   args:
+    #     creates: /home/orangepi/googlenv/lib/python3.10/site-packages/playsound
+    #   ignore_errors: yes
+    #   register: playsound_result
+
+    # - name: Install alternative audio package if playsound fails
+    #   command: /home/orangepi/googlenv/bin/pip install pygame
+    #   args:
+    #     creates: /home/orangepi/googlenv/lib/python3.10/site-packages/pygame
+    #   when: playsound_result.failed
 
     - name: Create application configuration
       copy:
