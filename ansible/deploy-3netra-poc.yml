@@ -129,6 +129,29 @@
           - libxcb1-dev
         state: present
 
+    - name: Create required system groups
+      group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - gpio
+        - i2c
+        - spi
+        - bluetooth
+        - pulse-access
+        - audio
+        - video
+        - dialout
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        home: "{{ app_dir }}"
+        shell: /bin/bash
+        groups: audio,video,dialout,gpio,i2c,spi,bluetooth,pulse-access
+        append: yes
+
     - name: Create googlenv Python virtual environment
       command: python3 -m venv /home/orangepi/googlenv
       args:
