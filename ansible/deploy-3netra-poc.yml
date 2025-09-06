@@ -215,6 +215,8 @@
         - "psutil==5.9.0"
         - "python-dotenv==1.0.1"
         - "tqdm==4.66.5"
+        - "sounddevice==0.4.6"
+        - "soundfile==0.12.1"
       ignore_errors: yes
       register: core_deps_result
 
@@ -235,6 +237,9 @@
         - "ultralytics==8.3.81"
         - "torch==2.6.0"
         - "torchvision==0.21.0"
+        - "matplotlib==3.10.1"
+        - "pandas==2.2.3"
+        - "scikit-learn==1.6.1"
       ignore_errors: yes
       register: optional_deps_result
 
@@ -290,8 +295,8 @@
         dest: "{{ app_dir }}/app/start.sh"
         content: |
           #!/bin/bash
-          cd "{{   }}/app"
-          source "{{ app_dir }}/venv/bin/activate"
+          cd "{{ app_dir }}/app"
+          source /home/orangepi/googlenv/bin/activate
           exec uvicorn main:app --host 0.0.0.0 --port 8000
         mode: '0755'
         owner: "{{ app_user }}"

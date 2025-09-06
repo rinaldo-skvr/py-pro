@@ -70,9 +70,9 @@ jobs:
         # Create working copy of base image
         cp "${{ env.BASE_IMAGE_PATH }}" working-image.img
         
-        # Expand image size for additional software (add 2GB)
+        # Expand image size for additional software (add 8GB)
         echo "Expanding image size..."
-        dd if=/dev/zero bs=1M count=2048 >> working-image.img
+        dd if=/dev/zero bs=1M count=8192 >> working-image.img
         
         # Fix partition table and resize
         echo "Resizing partition..."
