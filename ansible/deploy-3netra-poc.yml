@@ -197,12 +197,11 @@
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
 
-    - name: Install Python dependencies
-      become_user: "{{ app_user }}"
-      pip:
-        requirements: "{{ app_dir }}/app/requirements.txt"
-        virtualenv: "{{ app_dir }}/venv"
-        extra_args: --no-cache-dir
+    - name: Install Python dependencies in googlenv virtual environment (with retry)
+      command: /home/orangepi/googlenv/bin/pip install -r "{{ app_dir }}/app/requirements.txt" --no-cache-dir --timeout 300
+      retries: 3
+      delay: 10
+      until: true
 
     # - name: Install playsound with fallback
     #   command: /home/orangepi/googlenv/bin/pip install playsound
