@@ -171,11 +171,9 @@
         virtualenv: "{{ app_dir }}/venv"
 
     - name: Install Python dependencies in googlenv virtual environment
-      become_user: "{{ app_user }}"
-      pip:
-        requirements: "{{ app_dir }}/app/requirements.txt"
-        virtualenv: /home/orangepi/googlenv
-        extra_args: --no-cache-dir
+      command: /home/orangepi/googlenv/bin/pip install -r "{{ app_dir }}/app/requirements.txt" --no-cache-dir
+      args:
+        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
 
     # - name: Install Python dependencies
     #   become_user: "{{ app_user }}"
