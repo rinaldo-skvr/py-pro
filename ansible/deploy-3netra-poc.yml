@@ -99,6 +99,36 @@
           - openssh-server
         state: present
 
+    - name: Install additional build dependencies
+      apt:
+        name:
+          - python3-wheel
+          - python3-setuptools
+          - python3-distutils
+          - python3-numpy-dev
+          - libffi-dev
+          - libssl-dev
+          - libbz2-dev
+          - libreadline-dev
+          - libsqlite3-dev
+          - libncurses5-dev
+          - libncursesw5-dev
+          - xz-utils
+          - tk-dev
+          - libxml2-dev
+          - libxmlsec1-dev
+          - libffi-dev
+          - liblzma-dev
+          - zlib1g-dev
+          - libjpeg8-dev
+          - libfreetype6-dev
+          - liblcms2-dev
+          - libwebp-dev
+          - libharfbuzz-dev
+          - libfribidi-dev
+          - libxcb1-dev
+        state: present
+
     - name: Create googlenv Python virtual environment
       command: python3 -m venv /home/orangepi/googlenv
       args:
@@ -110,29 +140,6 @@
         state: latest
         virtualenv: /home/orangepi/googlenv
 
-
-    - name: Create required system groups
-      group:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - gpio
-        - i2c
-        - spi
-        - bluetooth
-        - pulse-access
-        - audio
-        - video
-        - dialout
-
-    - name: Create application user
-      user:
-        name: "{{ app_user }}"
-        system: yes
-        home: "{{ app_dir }}"
-        shell: /bin/bash
-        groups: audio,video,dialout,gpio,i2c,spi,bluetooth,pulse-access
-        append: yes
 
     - name: Create application directory structure
       file:
@@ -147,7 +154,7 @@
         - "{{ app_dir }}/config"
         - "{{ app_dir }}/logs"
         - /var/log/blindassist
-
+        
     - name: Copy application source code
       copy:
         src: "{{ playbook_dir }}/../src/"
@@ -157,23 +164,18 @@
         mode: '0755'
       when: ansible_check_mode == false
 
-    - name: Create Python virtual environment
-      become_user: "{{ app_user }}"
-      command: python3 -m venv "{{ app_dir }}/venv"
+    - name: Install setuptools and wheel in googlenv virtual environment
+      command: /home/orangepi/googlenv/bin/pip install --upgrade setuptools wheel
       args:
-        creates: "{{ app_dir }}/venv/bin/activate"
+        creates: /home/orangepi/googlenv/lib/python3.10/site-packages/setuptools
 
-    - name: Upgrade pip in virtual environment
-      become_user: "{{ app_user }}"
-      pip:
-        name: pip
-        state: latest
-        virtualenv: "{{ app_dir }}/venv"
-
-    - name: Install Python dependencies in googlenv virtual environment
-      command: /home/orangepi/googlenv/bin/pip install -r "{{ app_dir }}/app/requirements.txt" --no-cache-dir
+    - name: Install Python dependencies in googlenv virtual environment (with retry)
+      command: /home/orangepi/googlenv/bin/pip install -r "{{ app_dir }}/app/requirements.txt" --no-cache-dir --timeout 300
       args:
         creates: /home/orangepi/googlenv/lib/python3.10/site-packages/fastapi
+      retries: 3
+      delay: 10
+      until: true
 
     # - name: Install Python dependencies
     #   become_user: "{{ app_user }}"
