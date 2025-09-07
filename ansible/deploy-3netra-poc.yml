@@ -71,6 +71,10 @@
           # System libraries
           - libdbus-1-dev
           - libgirepository1.0-dev
+          - libgirepository-2.0-dev
+          - libgobject-2.0-dev
+          - libglib2.0-dev
+          - libffi-dev
           
           # Bluetooth
           - bluetooth
