@@ -13,7 +13,7 @@ pyA20
 PyAudio
 reportlab
 typed-ast
-pygobject
+# pygobject
 gtts
 aiohappyeyeballs==2.4.3
 aiohttp==3.10.10
@@ -141,7 +141,7 @@ pycups==2.0.1
 pydantic_core==2.18.2
 pygame==2.5.2
 Pygments==2.19.1
-PyGObject==3.42.1
+# PyGObject==3.42.1
 pyinstaller==6.11.1
 pyinstaller-hooks-contrib==2024.11
 PyJWT==2.3.0

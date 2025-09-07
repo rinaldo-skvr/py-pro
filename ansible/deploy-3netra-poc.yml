@@ -74,6 +74,11 @@
           - libglib2.0-dev
           - libffi-dev
           
+          # GObject Introspection (fix PyGObject build issues)
+          - gobject-introspection
+          - python3-gi
+          - gir1.2-glib-2.0
+          
           # Bluetooth
           - bluetooth
           - bluez
