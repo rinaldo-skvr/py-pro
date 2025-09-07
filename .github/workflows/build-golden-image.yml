@@ -7,7 +7,7 @@ on:
 
 env:
   IMAGE_NAME: "3netra-orangepi-golden-image"
-  BASE_IMAGE_PATH: "Orangepizero2w-base-image-desktop/Orangepizero2w_1.0.0_ubuntu_jammy_desktop_xfce_linux6.1.31.img"
+  BASE_IMAGE_PATH: "base-image/Orangepizero2w_1.0.0_ubuntu_jammy_desktop_xfce_linux6.1.31.img"
 
 permissions:
   contents: write
