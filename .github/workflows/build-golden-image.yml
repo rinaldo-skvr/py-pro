@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: "blindassist-orangepi"
-  BASE_IMAGE_PATH: "base-image/Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31.img"
+  IMAGE_NAME: "3netra-orangepi-golden-image"
+  BASE_IMAGE_PATH: "Orangepizero2w-base-image-desktop/Orangepizero2w_1.0.0_ubuntu_jammy_desktop_xfce_linux6.1.31.img"
 
 permissions:
   contents: write
@@ -43,25 +43,25 @@ jobs:
         
         # Download base image from GitHub release
         echo "Downloading base image package..."
-        wget -q https://github.com/${{ github.repository }}/releases/download/base-image-v1/base-image.zip
-        
+        wget -q https://github.com/${{ github.repository }}/releases/download/orangepi02w-base-image-desktop-v1/Orangepizero2w-base-image-desktop.zip
+
         # Check if download was successful
-        if [ ! -s "base-image.zip" ]; then
+        if [ ! -s "Orangepizero2w-base-image-desktop.zip" ]; then
           echo "Failed to download base image"
-          cat "base-image.zip"  # Show error message if any
+          cat "Orangepizero2w-base-image-desktop.zip"  # Show error message if any
           exit 1
         fi
         
         # Extract the zip file
         echo "Extracting base image files..."
-        unzip base-image.zip
+        unzip Orangepizero2w-base-image-desktop.zip
         
         # Verify checksum
         echo "Verifying checksum..."
-        sha256sum -c Orangepizero2w_1.0.0_ubuntu_jammy_server_linux6.1.31.img.sha
+        sha256sum -c Orangepizero2w_1.0.0_ubuntu_jammy_desktop_xfce_linux6.1.31.img.sha
         
         # Clean up archive file
-        rm base-image.zip
+        rm Orangepizero2w-base-image-desktop.zip
         
         cd ..
 
@@ -177,7 +177,7 @@ jobs:
     - name: Upload golden image artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: blindassist-golden-image
+        name: 3netra-golden-image
         path: |
           ${{ env.FINAL_IMAGE_FILE }}
           ${{ env.CHECKSUM_FILE }}
