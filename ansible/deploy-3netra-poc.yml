@@ -35,7 +35,7 @@
         - audio
         - video
         - dialout
-        
+
     - name: Create application user
       user:
         name: "{{ app_user }}"
@@ -58,6 +58,14 @@
         - "{{ app_dir }}/config"
         - "{{ app_dir }}/logs"
         - /var/log/3netra
+
+    - name: Install git (required before cloning)
+      apt:
+        name:
+          - git
+          - ca-certificates
+        state: present
+        update_cache: yes
         
     - name: Clone 3Netra 3nOS repository (using PAT)
       git:
@@ -66,7 +74,7 @@
         version: HEAD
         force: yes
       when: ansible_check_mode == false
-      no_log: true
+      # no_log: true
 
     - name: venv prerequisites
       apt:
