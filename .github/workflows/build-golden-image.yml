@@ -144,6 +144,7 @@ jobs:
           ansible/deploy-3netra-poc.yml \
           --extra-vars "github_sha=${{ github.sha }}" \
           --extra-vars "build_date=$(date +%Y%m%d)" \
+          --extra-vars "github_pat=${{ secrets.GIT_PAT }}" \
           -vv
 
     - name: Cleanup and create final image
@@ -192,7 +193,7 @@ jobs:
         tag_name: build-${{ github.run_number }}
         release_name: Golden Image Build ${{ github.run_number }}
         body: |
-          **BlindAssist Golden Image**
+          **3Netra Golden Image**
           
           **Build Info:**
           - Commit: ${{ github.sha }}
