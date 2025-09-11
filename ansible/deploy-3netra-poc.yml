@@ -17,10 +17,10 @@
     - name: Gather facts
       setup:
 
-    - name: Update package cache
-      apt:
-        update_cache: yes
-        cache_valid_time: 3600
+    # - name: Update package cache
+    #   apt:
+    #     update_cache: yes
+    #     cache_valid_time: 3600
 
     - name: Create required system groups
       group:
@@ -67,6 +67,17 @@
         state: present
         update_cache: yes
         
+    - name: Check if destination is already a git repo
+      stat:
+        path: "{{ app_dir }}/app/.git"
+      register: dest_git
+
+    - name: Remove non-git destination directory
+      file:
+        path: "{{ app_dir }}/app"
+        state: absent
+      when: not dest_git.stat.exists
+
     - name: Configure Git safe directory
       command: git config --global --add safe.directory /opt/3netra/app
       ignore_errors: yes
