@@ -17,10 +17,10 @@
     - name: Gather facts
       setup:
 
-    # - name: Update package cache
-    #   apt:
-    #     update_cache: yes
-    #     cache_valid_time: 3600
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
     - name: Create required system groups
       group:
@@ -121,6 +121,14 @@
         group: "{{ app_user }}"
         mode: '0644'
 
+    - name: Ensure Downloads directory exists
+      file:
+        path: /home/orangepi/Downloads
+        state: directory
+        owner: orangepi
+        group: orangepi
+        mode: '0755'
+        
     - name: Copy intro sound to Downloads
       copy:
         src: "{{ app_dir }}/app/SoundFiles/translated.mp3"
