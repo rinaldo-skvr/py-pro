@@ -35,7 +35,7 @@
         - audio
         - video
         - dialout
-
+        
     - name: Create application user
       user:
         name: "{{ app_user }}"
@@ -44,17 +44,6 @@
         shell: /bin/bash
         groups: audio,video,dialout,gpio,i2c,spi,bluetooth,pulse-access
         append: yes
-
-    - name: Create googlenv Python virtual environment
-      command: python3 -m venv /home/orangepi/googlenv
-      args:
-        creates: /home/orangepi/googlenv/bin/activate
-
-    - name: Upgrade pip in googlenv virtual environment
-      pip:
-        name: pip
-        state: latest
-        virtualenv: /home/orangepi/googlenv
 
     - name: Create application directory structure
       file:
@@ -78,6 +67,28 @@
         force: yes
       when: ansible_check_mode == false
       no_log: true
+
+    - name: venv prerequisites
+      apt:
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - python3-distutils
+          - python3-setuptools
+        state: present
+        update_cache: yes
+
+    - name: Create googlenv Python virtual environment
+      command: python3 -m venv /home/orangepi/googlenv
+      args:
+        creates: /home/orangepi/googlenv/bin/activate
+
+    - name: Upgrade pip in googlenv virtual environment
+      pip:
+        name: pip
+        state: latest
+        virtualenv: /home/orangepi/googlenv
 
     - name: Copy requirements.txt to target
       copy:
