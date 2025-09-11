@@ -22,6 +22,19 @@
         update_cache: yes
         cache_valid_time: 3600
 
+    - name: Create required system groups
+      group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - gpio
+        - i2c
+        - spi
+        - bluetooth
+        - pulse-access
+        - audio
+        - video
+        - dialout
 
     - name: Create application user
       user:
@@ -42,7 +55,6 @@
         name: pip
         state: latest
         virtualenv: /home/orangepi/googlenv
-
 
     - name: Create application directory structure
       file:
@@ -73,6 +85,13 @@
         dest: "{{ app_dir }}/app/requirements.txt"
         owner: "{{ app_user }}"
         group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: Copy intro sound to Downloads
+      copy:
+        src: "{{ app_dir }}/app/SoundFiles/translated.mp3"
+        dest: /home/orangepi/Downloads/intro-sound-180639.mp3
+        remote_src: yes
         mode: '0644'
 
     - name: Install system dependencies
@@ -191,19 +210,6 @@
           - libxcb1-dev
         state: present
 
-    - name: Create required system groups
-      group:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - gpio
-        - i2c
-        - spi
-        - bluetooth
-        - pulse-access
-        - audio
-        - video
-        - dialout
 
     - name: Initialize language data file to English
       shell: echo -n 'English' | tee /home/orangepi/data1.txt > /dev/null
