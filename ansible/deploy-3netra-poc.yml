@@ -67,11 +67,15 @@
         state: present
         update_cache: yes
         
+    - name: Configure Git safe directory
+      command: git config --global --add safe.directory /opt/3netra/app
+      ignore_errors: yes
+      
     - name: Clone 3Netra 3nOS repository (using PAT)
       git:
         repo: "https://{{ github_pat }}@github.com/3Netra-ai/3nOS.git"
         dest: "{{ app_dir }}/app"
-        version: HEAD
+        version: main
         force: yes
       when: ansible_check_mode == false
       # no_log: true
